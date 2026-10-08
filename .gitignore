@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.bak
+*.tmp
+state.json
+profile/
+.stemble-mcp/
+stemble-exports/
+.env
+.DS_Store
+*-questions.txt
+dist/

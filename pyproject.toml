@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stemble-mcp"
+version = "0.1.0"
+description = "Unofficial read-only MCP server for reading Stemble coursework"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "A12N4V" }]
+keywords = ["mcp", "stemble", "claude", "education"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Education",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows",
+]
+dependencies = ["mcp[cli]>=1.2,<2", "httpx>=0.27", "playwright>=1.40"]
+
+[project.scripts]
+stemble-mcp = "stemble_mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/A12N4V/stemble-mcp"
+Issues = "https://github.com/A12N4V/stemble-mcp/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stemble_mcp"]
+
+[dependency-groups]
+dev = ["pytest"]
