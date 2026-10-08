@@ -1,4 +1,21 @@
-# stemble-mcp
+<p align="center">
+  <img src="assets/stemble-favicon.svg" alt="Stemble" width="96" height="96">
+</p>
+
+<h1 align="center">stemble-mcp</h1>
+
+<p align="center">Unofficial, read-only MCP server for reading your Stemble coursework.</p>
+
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white">
+  <img alt="MCP" src="https://img.shields.io/badge/MCP-FastMCP-000000?logo=modelcontextprotocol&logoColor=white">
+  <img alt="httpx" src="https://img.shields.io/badge/httpx-HTTP_client-0B7285?logo=python&logoColor=white">
+  <img alt="Playwright" src="https://img.shields.io/badge/Playwright-Chrome_%7C_Edge-2EAD33?logo=googlechrome&logoColor=white">
+  <img alt="Inertia.js" src="https://img.shields.io/badge/Inertia.js-JSON_pages-9553E9?logo=inertia&logoColor=white">
+  <img alt="uv" src="https://img.shields.io/badge/uv-package_manager-DE5FE9?logo=uv&logoColor=white">
+  <img alt="pytest" src="https://img.shields.io/badge/pytest-tests-0A9EDC?logo=pytest&logoColor=white">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
+</p>
 
 An MCP server that lets an AI assistant read your Stemble coursework: courses, assignments, tasks and lab files. It works with Claude Code, Claude Desktop and any other MCP client.
 
@@ -7,6 +24,57 @@ This project is unofficial and is not affiliated with or endorsed by Stemble. It
 ## Academic integrity
 
 Follow your course's academic integrity and AI-use policies. Many courses restrict or prohibit AI assistance. Check your syllabus and ask your instructor if you are unsure. You are responsible for how you use this tool.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Client["MCP client"]
+        A["Claude Code / Claude Desktop"]
+    end
+
+    subgraph Server["stemble-mcp (Python, FastMCP over stdio)"]
+        T["Tools<br/>list_courses, get_page, list_assignments,<br/>get_assignment, get_task,<br/>export_assignment, download_file"]
+        F["fetch()<br/>path check, one shared refresh"]
+        H["httpx client<br/>GET only, same-host redirects,<br/>retries on 429 / 5xx"]
+        S["Output shaping<br/>strip HTML, drop noise props,<br/>truncate"]
+        P["Playwright<br/>login, silent refresh,<br/>client-rendered tasks"]
+        O["Confined writer<br/>STEMBLE_OUTPUT_DIR only"]
+    end
+
+    ST[("~/.stemble-mcp<br/>state.json + browser profile<br/>owner-only")]
+    W["app.stemble.com<br/>Inertia JSON pages"]
+    B["Chrome / Edge / Chromium"]
+    D[("Exports<br/>questions.txt + img/")]
+    U(["You sign in<br/>in the browser"])
+
+    A <-->|"stdio / JSON-RPC"| T
+    T --> F --> H
+    H <-->|"HTTPS, session cookies"| W
+    H -->|"rotated cookies, atomic write"| ST
+    ST -->|"load cookies"| H
+    H --> S --> T
+    F -.->|"session expired"| P
+    P --> B
+    B <--> W
+    U --> B
+    P -->|"fresh cookies"| ST
+    T -->|"export / download"| O --> D
+```
+
+Reading it left to right: your assistant calls a tool, `fetch()` validates the path and hands it to the httpx client, which sends a GET to Stemble with the saved cookies. Results are slimmed down before they go back to the assistant. If Stemble says the session is gone, a headless Playwright browser tries to restore it from the saved profile, and `stemble-mcp login` is the manual fallback. Only `export_assignment` and `download_file` write to disk, and only inside `STEMBLE_OUTPUT_DIR`.
+
+## Tech
+
+| Piece | Used for |
+|---|---|
+| Python 3.11+ | The whole server |
+| FastMCP (`mcp` SDK) | MCP tool definitions and the stdio transport |
+| httpx | Authenticated GET requests, cookie jar, retries |
+| Inertia.js pages | Stemble serves page data as JSON when asked with `X-Inertia` headers |
+| Playwright with Chrome, Edge or Chromium | Interactive login, headless session refresh, older client-rendered question types |
+| uv and hatchling | Install, run and packaging (`uvx` runs it with no setup) |
+| pytest | Tests for path confinement, host checks and text cleanup |
 
 ## Tools
 
